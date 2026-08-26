@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "../supabaseClient";
 
 function Signup() {
   const navigate = useNavigate();
@@ -8,7 +9,7 @@ function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleSignup = (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
 
     if (!name || !email || !password) {
@@ -16,8 +17,20 @@ function Signup() {
       return;
     }
 
-    // Temporary demo signup
-    alert("Account created successfully!");
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: name },
+      },
+    });
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    alert("Account created successfully! Please check your email to confirm your account.");
 
     navigate("/login");
   };
@@ -66,7 +79,10 @@ function Signup() {
             onChange={(e) => setPassword(e.target.value)}
           />
 
-          <button type="submit" className="auth-button">
+          <button
+            type="submit"
+            className="auth-button"
+          >
             Create Account
           </button>
 
@@ -74,7 +90,9 @@ function Signup() {
 
         <p className="auth-switch">
           Already have an account?{" "}
-          <Link to="/login">Log in</Link>
+          <Link to="/login">
+            Log in
+          </Link>
         </p>
 
       </div>

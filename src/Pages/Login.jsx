@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "../supabaseClient";
 
 function Login() {
   const navigate = useNavigate();
@@ -7,7 +8,7 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
 
     if (!email || !password) {
@@ -15,10 +16,18 @@ function Login() {
       return;
     }
 
-    // Temporary demo login
-    alert("Login successful!");
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-    navigate("/jobs");
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    alert(`Welcome back, ${data.user.user_metadata?.full_name || email}!`);
+    navigate("/dashboard");
   };
 
   return (
@@ -56,7 +65,10 @@ function Login() {
             onChange={(e) => setPassword(e.target.value)}
           />
 
-          <button type="submit" className="auth-button">
+          <button
+            type="submit"
+            className="auth-button"
+          >
             Log In
           </button>
 
@@ -64,7 +76,9 @@ function Login() {
 
         <p className="auth-switch">
           Don't have an account?{" "}
-          <Link to="/signup">Create one</Link>
+          <Link to="/signup">
+            Create one
+          </Link>
         </p>
 
       </div>

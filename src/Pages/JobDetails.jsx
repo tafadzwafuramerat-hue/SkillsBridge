@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { supabase } from "../supabaseClient";
 
 function JobDetails() {
   const { id } = useParams();
@@ -69,32 +70,41 @@ function JobDetails() {
         "Track campaign performance",
       ],
     },
-
-    {
-      id: "4",
-      title: "Junior Software Engineer",
-      company: "DevAfrica",
-      location: "Remote",
-      type: "Full-time",
-      salary: "$500 - $800/month",
-      description:
-        "DevAfrica is looking for a junior software engineer to help build modern web applications.",
-      requirements: [
-        "Basic programming knowledge",
-        "Knowledge of Python or JavaScript",
-        "Git and GitHub experience",
-        "Problem-solving skills",
-      ],
-      responsibilities: [
-        "Develop web applications",
-        "Write clean code",
-        "Fix software bugs",
-        "Work with the development team",
-      ],
-    },
   ];
 
   const job = jobs.find((job) => job.id === String(id));
+
+  const handleSaveJob = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      alert("Please log in before saving a job.");
+      navigate("/login");
+      return;
+    }
+
+    const { error } = await supabase.from("saved_jobs").insert({
+      user_id: user.id,
+      job_id: job.id,
+      title: job.title,
+      company: job.company,
+      location: job.location,
+      type: job.type,
+      salary: job.salary,
+    });
+
+    if (error?.code === "23505") {
+      alert("This job is already saved.");
+      return;
+    }
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    alert("Job saved successfully!");
+  };
 
   if (!job) {
     return (
@@ -145,6 +155,7 @@ function JobDetails() {
 
           <section>
             <h2>About the Job</h2>
+
             <p>{job.description}</p>
           </section>
 
@@ -153,7 +164,9 @@ function JobDetails() {
 
             <ul>
               {job.responsibilities.map((item, index) => (
-                <li key={index}>{item}</li>
+                <li key={index}>
+                  {item}
+                </li>
               ))}
             </ul>
           </section>
@@ -163,7 +176,9 @@ function JobDetails() {
 
             <ul>
               {job.requirements.map((item, index) => (
-                <li key={index}>{item}</li>
+                <li key={index}>
+                  {item}
+                </li>
               ))}
             </ul>
           </section>
@@ -176,13 +191,18 @@ function JobDetails() {
 
           <p>Salary</p>
 
-          <button className="apply-button">
+         <button
+            className="apply-button"
+            onClick={() => navigate(`/jobs/${job.id}/apply`)}
+          >
             Apply Now
           </button>
-
-          <button className="save-details-button">
-            ♡ Save Job
-          </button>
+          <button
+                className="save-details-button"
+                onClick={handleSaveJob}
+            >
+             ♡ Save Job
+    </button>
 
         </aside>
 

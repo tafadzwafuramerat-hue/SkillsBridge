@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { supabase } from "../supabaseClient";
 
 import CategoryCard from "../Components/CategoryCard";
 import JobCard from "../Components/JobCard";
 
 function Home() {
+
+console.log("Supabase connected:", supabase);
   const navigate = useNavigate();
 
   const [search, setSearch] = useState("");
@@ -77,31 +80,31 @@ function Home() {
           />
 
           <CategoryCard
-            icon="🎨"
+            icon=""
             title="Design"
             jobs="842"
           />
 
           <CategoryCard
-            icon="📢"
+            icon=""
             title="Marketing"
             jobs="634"
           />
 
           <CategoryCard
-            icon="📊"
+            icon=""
             title="Data Science"
             jobs="421"
           />
 
           <CategoryCard
-            icon="🎧"
+            icon=""
             title="Customer Support"
             jobs="318"
           />
 
           <CategoryCard
-            icon="＋"
+            icon=""
             title="More"
             jobs="Explore"
           />
