@@ -174,7 +174,7 @@ function Apply() {
             navigate(`/jobs/${id}`)
           }
         >
-          ← Back to Job
+          ←  Back to Job
         </button>
 
 

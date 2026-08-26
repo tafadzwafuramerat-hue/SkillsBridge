@@ -144,16 +144,6 @@ function JobDetails() {
   return (
     <div className="job-details-page">
 
-      {/* BACK BUTTON */}
-
-      <button
-        className="back-button"
-        onClick={() => navigate("/jobs")}
-      >
-        ← Back to Jobs
-      </button>
-
-
       <div className="job-details">
 
         {/* MAIN JOB INFORMATION */}
