@@ -1,117 +1,140 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
 function JobDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const jobs = [
-    {
-      id: "1",
-      title: "Junior Software Developer",
-      company: "TechZim Solutions",
-      location: "Remote",
-      type: "Full-time",
-      salary: "$400 - $700/month",
-      description:
-        "We are looking for a motivated junior software developer to join our development team.",
-      requirements: [
-        "Basic knowledge of JavaScript or Python",
-        "Understanding of HTML and CSS",
-        "Knowledge of Git and GitHub",
-        "Good problem-solving skills",
-      ],
-      responsibilities: [
-        "Build and maintain web applications",
-        "Work with other developers",
-        "Fix bugs and improve features",
-        "Participate in code reviews",
-      ],
-    },
+  const [job, setJob] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
 
-    {
-      id: "2",
-      title: "UI/UX Design Intern",
-      company: "CreativeHub",
-      location: "Harare",
-      type: "Internship",
-      salary: "$250/month",
-      description:
-        "CreativeHub is looking for a creative design intern to help create user-friendly digital experiences.",
-      requirements: [
-        "Basic knowledge of Figma",
-        "Understanding of UI/UX principles",
-        "Good visual design skills",
-      ],
-      responsibilities: [
-        "Create wireframes and prototypes",
-        "Assist with user research",
-        "Design user interfaces",
-      ],
-    },
+  // Fetch job
+  useEffect(() => {
+    const fetchJob = async () => {
+      const { data, error } = await supabase
+        .from("jobs")
+        .select("*")
+        .eq("id", id)
+        .single();
 
-    {
-      id: "3",
-      title: "Digital Marketing Assistant",
-      company: "MarketWave",
-      location: "Bulawayo",
-      type: "Full-time",
-      salary: "$300 - $500/month",
-      description:
-        "MarketWave is looking for a digital marketing assistant to support online marketing campaigns.",
-      requirements: [
-        "Basic digital marketing knowledge",
-        "Social media knowledge",
-        "Good communication skills",
-      ],
-      responsibilities: [
-        "Create social media content",
-        "Assist with campaigns",
-        "Track campaign performance",
-      ],
-    },
-  ];
+      if (error) {
+        console.error("Error fetching job:", error);
+        setLoading(false);
+        return;
+      }
 
-  const job = jobs.find((job) => job.id === String(id));
+      setJob(data);
+      setLoading(false);
+    };
 
+    fetchJob();
+  }, [id]);
+
+  // Check whether the job is already saved
+  useEffect(() => {
+    const checkSavedJob = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("saved_jobs")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("job_id", id)
+        .maybeSingle();
+
+      if (error) {
+        console.error(
+          "Error checking saved job:",
+          error
+        );
+        return;
+      }
+
+      if (data) {
+        setIsSaved(true);
+      }
+    };
+
+    checkSavedJob();
+  }, [id]);
+
+  // Save job
   const handleSaveJob = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
+    // User is not logged in
     if (!user) {
-      alert("Please log in before saving a job.");
+      alert("Please log in to save jobs.");
       navigate("/login");
       return;
     }
 
-    const { error } = await supabase.from("saved_jobs").insert({
-      user_id: user.id,
-      job_id: job.id,
-      title: job.title,
-      company: job.company,
-      location: job.location,
-      type: job.type,
-      salary: job.salary,
-    });
-
-    if (error?.code === "23505") {
-      alert("This job is already saved.");
+    // Prevent duplicate saves
+    if (isSaved) {
+      alert("You have already saved this job.");
       return;
     }
+
+    setSaving(true);
+
+    const { error } = await supabase
+      .from("saved_jobs")
+      .insert({
+        user_id: user.id,
+        job_id: id,
+      });
 
     if (error) {
+      console.error(
+        "Error saving job:",
+        error
+      );
+
       alert(error.message);
+      setSaving(false);
       return;
     }
+
+    setIsSaved(true);
+    setSaving(false);
 
     alert("Job saved successfully!");
   };
 
+  // Loading
+  if (loading) {
+    return (
+      <div className="loading">
+        <h2>Loading job...</h2>
+      </div>
+    );
+  }
+
+  // Job not found
   if (!job) {
     return (
-      <div className="not-found">
+      <div className="no-jobs">
         <h2>Job not found</h2>
 
-        <button onClick={() => navigate("/jobs")}>
+        <p>
+          The job you are looking for does not exist.
+        </p>
+
+        <button
+          className="view-job-button"
+          onClick={() => navigate("/jobs")}
+        >
           Back to Jobs
         </button>
       </div>
@@ -121,6 +144,8 @@ function JobDetails() {
   return (
     <div className="job-details-page">
 
+      {/* BACK BUTTON */}
+
       <button
         className="back-button"
         onClick={() => navigate("/jobs")}
@@ -128,81 +153,180 @@ function JobDetails() {
         ← Back to Jobs
       </button>
 
+
       <div className="job-details">
+
+        {/* MAIN JOB INFORMATION */}
 
         <main className="job-details-main">
 
           <div className="details-header">
 
             <div className="details-logo">
-              {job.company.charAt(0)}
+              {job.company?.charAt(0)}
             </div>
 
             <div>
-              <h1>{job.title}</h1>
 
-              <p>{job.company}</p>
+              <h1>
+                {job.title}
+              </h1>
+
+              <p>
+                {job.company}
+              </p>
 
               <div className="details-info">
-                <span>📍 {job.location}</span>
-                <span>💼 {job.type}</span>
+
+                <span>
+                  📍 {job.location}
+                </span>
+
+                <span>
+                  💼 {job.type}
+                </span>
+
+                {job.salary && (
+                  <span>
+                    💰 {job.salary}
+                  </span>
+                )}
+
               </div>
+
             </div>
 
           </div>
 
+
           <hr />
 
-          <section>
-            <h2>About the Job</h2>
 
-            <p>{job.description}</p>
+          {/* DESCRIPTION */}
+
+          <section>
+
+            <h2>
+              About the Job
+            </h2>
+
+            <p>
+              {job.description ||
+                "No job description provided."}
+            </p>
+
           </section>
 
-          <section>
-            <h2>Responsibilities</h2>
 
-            <ul>
-              {job.responsibilities.map((item, index) => (
-                <li key={index}>
-                  {item}
-                </li>
-              ))}
-            </ul>
+          {/* RESPONSIBILITIES */}
+
+          <section>
+
+            <h2>
+              Responsibilities
+            </h2>
+
+            {job.responsibilities &&
+            job.responsibilities.length > 0 ? (
+
+              <ul>
+
+                {job.responsibilities.map(
+                  (responsibility, index) => (
+                    <li key={index}>
+                      {responsibility}
+                    </li>
+                  )
+                )}
+
+              </ul>
+
+            ) : (
+
+              <p>
+                No responsibilities provided.
+              </p>
+
+            )}
+
           </section>
 
-          <section>
-            <h2>Requirements</h2>
 
-            <ul>
-              {job.requirements.map((item, index) => (
-                <li key={index}>
-                  {item}
-                </li>
-              ))}
-            </ul>
+          {/* REQUIREMENTS */}
+
+          <section>
+
+            <h2>
+              Requirements
+            </h2>
+
+            {job.requirements &&
+            job.requirements.length > 0 ? (
+
+              <ul>
+
+                {job.requirements.map(
+                  (requirement, index) => (
+                    <li key={index}>
+                      {requirement}
+                    </li>
+                  )
+                )}
+
+              </ul>
+
+            ) : (
+
+              <p>
+                No requirements provided.
+              </p>
+
+            )}
+
           </section>
 
         </main>
 
+
+        {/* SIDE CARD */}
+
         <aside className="apply-card">
 
-          <h2>{job.salary}</h2>
+          <h2>
+            Interested in this job?
+          </h2>
 
-          <p>Salary</p>
+          <p>
+            Apply for this opportunity and
+            take the next step in your career.
+          </p>
 
-         <button
+
+          {/* APPLY */}
+
+          <button
             className="apply-button"
-            onClick={() => navigate(`/jobs/${job.id}/apply`)}
+            onClick={() =>
+              navigate(`/jobs/${id}/apply`)
+            }
           >
             Apply Now
           </button>
+
+
+          {/* SAVE */}
+
           <button
-                className="save-details-button"
-                onClick={handleSaveJob}
-            >
-             ♡ Save Job
-    </button>
+            className="save-details-button"
+            onClick={handleSaveJob}
+            disabled={saving}
+          >
+            {saving
+              ? "Saving..."
+              : isSaved
+              ? "Saved ✓"
+              : "Save Job"}
+          </button>
 
         </aside>
 

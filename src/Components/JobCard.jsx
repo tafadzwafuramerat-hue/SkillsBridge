@@ -1,5 +1,3 @@
-import { useNavigate } from "react-router-dom";
-
 function JobCard({
   id,
   title,
@@ -9,8 +7,6 @@ function JobCard({
   salary,
   logo,
 }) {
-  const navigate = useNavigate();
-
   return (
     <div className="job-card">
 
@@ -37,13 +33,6 @@ function JobCard({
 
       <div className="job-bottom">
         <strong>{salary}</strong>
-
-        <button
-          className="view-job"
-          onClick={() => navigate(`/jobs/${id}`)}
-        >
-          View Job
-        </button>
       </div>
 
     </div>

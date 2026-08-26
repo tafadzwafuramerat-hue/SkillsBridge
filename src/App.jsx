@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 
 import Home from "./Pages/Home";
 import Jobs from "./Pages/Jobs";
@@ -11,12 +11,28 @@ import Apply from "./Pages/Apply";
 function App() {
   return (
     <BrowserRouter>
-      <Navbar />
+      <AppRoutes />
+    </BrowserRouter>
+  );
+}
+
+function AppRoutes() {
+  const location = useLocation();
+  const hideNavbar =
+    ["/login", "/signup", "/dashboard"].includes(location.pathname) ||
+    location.pathname.startsWith("/jobs/") &&
+    location.pathname.endsWith("/apply");
+
+  return (
+    <>
+      {!hideNavbar && <Navbar />}
+
       <Routes>
 
         <Route path="/" element={<Home />} />
 
         <Route path="/jobs" element={<Jobs />} />
+        <Route path="/jobs/:id" element={<JobDetails />} />
 
         <Route
           path="/jobs/:id"
@@ -42,7 +58,7 @@ function App() {
   
 
       </Routes>
-    </BrowserRouter>
+    </>
   );
 }
 

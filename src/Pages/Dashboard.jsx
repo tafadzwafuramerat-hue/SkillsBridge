@@ -3,71 +3,168 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
 function Dashboard() {
-
-
   const navigate = useNavigate();
 
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
   const [applications, setApplications] = useState([]);
   const [savedJobs, setSavedJobs] = useState([]);
+
   const [bio, setBio] = useState("");
   const [location, setLocation] = useState("");
   const [skills, setSkills] = useState("");
 
   useEffect(() => {
     const loadDashboard = async () => {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      // Get logged-in user
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
 
       if (!currentUser) {
-        setLoading(false);
+         navigate("/login");
         return;
       }
 
       setUser(currentUser);
 
-      const [profileResult, applicationsResult, savedJobsResult] =
-        await Promise.all([
-          supabase.from("profiles").select("bio, location, skills").eq("id", currentUser.id).maybeSingle(),
-          supabase.from("applications").select("*").eq("user_id", currentUser.id).order("created_at", { ascending: false }),
-          supabase.from("saved_jobs").select("*").eq("user_id", currentUser.id).order("created_at", { ascending: false }),
-        ]);
+      // Load profile, applications and saved jobs
+      const [
+        profileResult,
+        applicationsResult,
+        savedJobsResult,
+      ] = await Promise.all([
+        // PROFILE
+        supabase
+          .from("profiles")
+          .select("bio, location, skills")
+          .eq("id", currentUser.id)
+          .maybeSingle(),
 
-      if (profileResult.error) console.error("Profile load failed:", profileResult.error);
-      if (applicationsResult.error) console.error("Applications load failed:", applicationsResult.error);
-      if (savedJobsResult.error) console.error("Saved jobs load failed:", savedJobsResult.error);
+        // APPLICATIONS + JOB INFORMATION
+        supabase
+          .from("applications")
+          .select(`
+            id,
+            user_id,
+            job_id,
+            phone,
+            cv,
+            cover_letter,
+            status,
+            created_at,
+            jobs (
+              id,
+              title,
+              company,
+              location,
+              type,
+              salary
+            )
+          `)
+          .eq("user_id", currentUser.id)
+          .order("created_at", {
+            ascending: false,
+          }),
 
+        // SAVED JOBS + JOB INFORMATION
+        supabase
+          .from("saved_jobs")
+          .select(`
+            id,
+            user_id,
+            job_id,
+            created_at,
+            jobs (
+              id,
+              title,
+              company,
+              location,
+              type,
+              salary
+            )
+          `)
+          .eq("user_id", currentUser.id)
+          .order("created_at", {
+            ascending: false,
+          }),
+      ]);
+
+      // Errors
+      if (profileResult.error) {
+        console.error(
+          "Profile load failed:",
+          profileResult.error
+        );
+      }
+
+      if (applicationsResult.error) {
+        console.error(
+          "Applications load failed:",
+          applicationsResult.error
+        );
+      }
+
+      if (savedJobsResult.error) {
+        console.error(
+          "Saved jobs load failed:",
+          savedJobsResult.error
+        );
+      }
+
+      // Profile
       setBio(profileResult.data?.bio || "");
       setLocation(profileResult.data?.location || "");
       setSkills(profileResult.data?.skills || "");
-      setApplications(applicationsResult.data || []);
-      setSavedJobs(savedJobsResult.data || []);
+
+      // Applications
+      setApplications(
+        applicationsResult.data || []
+      );
+
+      // Saved jobs
+      setSavedJobs(
+        savedJobsResult.data || []
+      );
+
       setLoading(false);
     };
 
     loadDashboard().catch((error) => {
-      console.error("Unable to load dashboard:", error);
+      console.error(
+        "Unable to load dashboard:",
+        error
+      );
+
       setLoading(false);
     });
   }, []);
 
+  // Save profile
   const handleSaveProfile = async (e) => {
     e.preventDefault();
 
     if (!user) {
-      alert("Your session has expired. Please log in again.");
+      alert(
+        "Your session has expired. Please log in again."
+      );
+
       navigate("/login");
       return;
     }
 
-    const { error } = await supabase.from("profiles").upsert({
-      id: user.id,
-      full_name: user.user_metadata?.full_name || "",
-      email: user.email || "",
-      bio,
-      location,
-      skills,
-    });
+    const { error } = await supabase
+      .from("profiles")
+      .upsert({
+        id: user.id,
+        full_name:
+          user.user_metadata?.full_name || "",
+        email: user.email || "",
+        bio,
+        location,
+        skills,
+      });
 
     if (error) {
       alert(error.message);
@@ -77,26 +174,64 @@ function Dashboard() {
     alert("Profile updated successfully!");
   };
 
+
+  const handleRemoveSavedJob = async (savedJobId) => {
+  const { error } = await supabase
+    .from("saved_jobs")
+    .delete()
+    .eq("id", savedJobId);
+
+  if (error) {
+    console.error(
+      "Error removing saved job:",
+      error
+    );
+
+    alert(error.message);
+    return;
+  }
+
+  // Remove it immediately from the screen
+  setSavedJobs((currentJobs) =>
+    currentJobs.filter(
+      (job) => job.id !== savedJobId
+    )
+  );
+
+  alert("Job removed from saved jobs.");
+};
+
+  // Logout
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/");
   };
 
+  // Loading
   if (loading) {
     return (
       <div className="dashboard-message">
-        <h2>Loading your dashboard...</h2>
+        <h2>
+          Loading your dashboard...
+        </h2>
       </div>
     );
   }
 
+  // Not logged in
   if (!user) {
     return (
       <div className="dashboard-message">
 
-        <h2>You are not logged in.</h2>
+        <h2>
+          You are not logged in.
+        </h2>
 
-        <button onClick={() => navigate("/login")}>
+        <button
+          onClick={() =>
+            navigate("/login")
+          }
+        >
           Log In
         </button>
 
@@ -107,7 +242,9 @@ function Dashboard() {
   return (
     <div className="dashboard">
 
-      {/* SIDEBAR */}
+      {/* =========================
+          SIDEBAR
+      ========================== */}
 
       <aside className="dashboard-sidebar">
 
@@ -117,53 +254,52 @@ function Dashboard() {
 
         <nav>
 
-         
+          <button
+            className="active"
+            onClick={() => {
+              document
+                .getElementById("dashboard")
+                ?.scrollIntoView({
+                  behavior: "smooth",
+                });
+            }}
+          >
+            Dashboard
+          </button>
 
-  <button
-    className="active"
-    onClick={() => {
-      document
-        .getElementById("dashboard")
-        ?.scrollIntoView({
-          behavior: "smooth",
-        });
-    }}
-  >
-    Dashboard
-  </button>
+          <button
+            onClick={() =>
+              navigate("/jobs")
+            }
+          >
+            Find Jobs
+          </button>
 
-  <button
-    onClick={() => navigate("/jobs")}
-  >
-    Find Jobs
-  </button>
+          <button
+            onClick={() => {
+              document
+                .getElementById("saved-jobs")
+                ?.scrollIntoView({
+                  behavior: "smooth",
+                });
+            }}
+          >
+            Saved Jobs
+          </button>
 
-  <button
-    onClick={() => {
-      document
-        .getElementById("saved-jobs")
-        ?.scrollIntoView({
-          behavior: "smooth",
-        });
-    }}
-  >
-    Saved Jobs
-  </button>
+          <button
+            onClick={() => {
+              document
+                .getElementById("applications")
+                ?.scrollIntoView({
+                  behavior: "smooth",
+                });
+            }}
+          >
+            Applications
+          </button>
 
-  <button
-    onClick={() => {
-      document
-        .getElementById("applications")
-        ?.scrollIntoView({
-          behavior: "smooth",
-        });
-    }}
-  >
-    Applications
-  </button>
-
-</nav>
-        
+        </nav>
 
         <button
           className="logout-button"
@@ -174,84 +310,152 @@ function Dashboard() {
 
       </aside>
 
-      {/* MAIN CONTENT */}
 
-      <main className="dashboard-main" id="dashboard">
+      {/* =========================
+          MAIN CONTENT
+      ========================== */}
+
+      <main
+        className="dashboard-main"
+        id="dashboard"
+      >
+
+        {/* HEADER */}
 
         <div className="dashboard-header">
 
           <div>
+
             <h1>
-              Welcome back, {user.user_metadata?.full_name || user.email}!
+              Welcome back,{" "}
+              {user.user_metadata?.full_name ||
+                user.email}
+              !
             </h1>
 
             <p>
-              Manage your profile and discover new opportunities.
+              Manage your profile and
+              discover new opportunities.
             </p>
+
           </div>
 
         </div>
 
-        {/* STATS */}
+
+        {/* =========================
+            STATS
+        ========================== */}
 
         <div className="dashboard-stats">
 
           <div className="stat-card">
-           <h3>{applications.length}</h3>
-            <p>Applications</p>
+
+            <h3>
+              {applications.length}
+            </h3>
+
+            <p>
+              Applications
+            </p>
+
           </div>
 
-          <div className="stat-card">
-            <h3>0</h3>
-            <p>Saved Jobs</p>
-          </div>
 
           <div className="stat-card">
-            <h3>0%</h3>
-            <p>Profile Complete</p>
+
+            <h3>
+              {savedJobs.length}
+            </h3>
+
+            <p>
+              Saved Jobs
+            </p>
+
+          </div>
+
+
+          <div className="stat-card">
+
+            <h3>
+              {calculateProfileCompletion(
+                user,
+                bio,
+                location,
+                skills
+              )}
+              %
+            </h3>
+
+            <p>
+              Profile Complete
+            </p>
+
           </div>
 
         </div>
 
-        {/* PROFILE */}
+
+        {/* =========================
+            PROFILE
+        ========================== */}
 
         <section className="profile-section">
 
           <div className="profile-heading">
 
             <div>
-              <h2>My Profile</h2>
+
+              <h2>
+                My Profile
+              </h2>
 
               <p>
-                Add information to help employers
-                understand your skills.
+                Add information to help
+                employers understand your
+                skills.
               </p>
+
             </div>
 
           </div>
+
 
           <form
             className="profile-form"
             onSubmit={handleSaveProfile}
           >
 
-            <label>Full Name</label>
+            <label>
+              Full Name
+            </label>
 
             <input
               type="text"
-              value={user.user_metadata?.full_name || ""}
+              value={
+                user.user_metadata?.full_name ||
+                ""
+              }
               disabled
             />
 
-            <label>Email</label>
+
+            <label>
+              Email
+            </label>
 
             <input
               type="email"
-              value={user.email || ""}
+              value={
+                user.email || ""
+              }
               disabled
             />
 
-            <label>Location</label>
+
+            <label>
+              Location
+            </label>
 
             <input
               type="text"
@@ -262,7 +466,10 @@ function Dashboard() {
               }
             />
 
-            <label>Professional Bio</label>
+
+            <label>
+              Professional Bio
+            </label>
 
             <textarea
               placeholder="Tell employers about yourself..."
@@ -272,7 +479,10 @@ function Dashboard() {
               }
             />
 
-            <label>Skills</label>
+
+            <label>
+              Skills
+            </label>
 
             <input
               type="text"
@@ -282,6 +492,7 @@ function Dashboard() {
                 setSkills(e.target.value)
               }
             />
+
 
             <button
               type="submit"
@@ -294,140 +505,258 @@ function Dashboard() {
 
         </section>
 
-        <section className="applications-section"id="applications" >
 
-  <div className="profile-heading">
-    <h2>My Applications</h2>
+        {/* =========================
+            APPLICATIONS
+        ========================== */}
 
-    <p>
-      Track the jobs you have applied for.
-    </p>
-  </div>
-
-  {applications.length === 0 ? (
-    <div className="no-applications">
-
-      <p>
-        You haven't applied for any jobs yet.
-      </p>
-
-      <button
-        onClick={() => navigate("/jobs")}
-      >
-        Find Jobs
-      </button>
-
-    </div>
-  ) : (
-    <div className="applications-list">
-
-      {applications.map((application, index) => (
-
-        <div
-          className="application-card"
-          key={index}
+        <section
+          className="applications-section"
+          id="applications"
         >
 
-          <div>
-            <h3>
-              {application.title}
-            </h3>
+          <div className="profile-heading">
+
+            <h2>
+              My Applications
+            </h2>
 
             <p>
-              {application.company}
+              Track the jobs you have applied
+              for.
             </p>
 
-            <span>
-              📍 {application.location}
-            </span>
           </div>
 
-          <div className="application-status">
-            {application.status}
-          </div>
 
-        </div>
+          {applications.length === 0 ? (
 
-      ))}
+            <div className="no-applications">
 
-    </div>
-  )}
+              <p>
+                You haven't applied for any
+                jobs yet.
+              </p>
 
-</section>
+              <button
+                onClick={() =>
+                  navigate("/jobs")
+                }
+              >
+                Find Jobs
+              </button>
 
-  <section className="saved-jobs-section" id="saved-jobs">
+            </div>
 
-  <div className="profile-heading">
+          ) : (
 
-    <h2>Saved Jobs</h2>
+            <div className="applications-list">
 
-    <p>
-      Jobs you've saved for later.
-    </p>
+              {applications.map(
+                (application) => {
 
-  </div>
+                  const job =
+                    application.jobs;
 
-  {savedJobs.length === 0 ? (
-    <div className="no-saved-jobs">
+                  return (
 
-      <p>
-        You haven't saved any jobs yet.
-      </p>
+                    <div
+                      className="application-card"
+                      key={application.id}
+                    >
 
-      <button
-        onClick={() => navigate("/jobs")}
-      >
-        Browse Jobs
-      </button>
+                      <div>
 
-    </div>
-  ) : (
+                        <h3>
+                          {job?.title ||
+                            "Job"}
+                        </h3>
 
-    <div className="saved-jobs-list">
+                        <p>
+                          {job?.company ||
+                            "Company"}
+                        </p>
 
-      {savedJobs.map((savedJob) => (
+                        <span>
+                          📍{" "}
+                          {job?.location ||
+                            "Location not provided"}
+                        </span>
 
-        <div
-          className="saved-job-card"
-          key={savedJob.id}
+                      </div>
+
+
+                      <div className="application-status">
+                        {application.status ||
+                          "Applied"}
+                      </div>
+
+                    </div>
+
+                  );
+                }
+              )}
+
+            </div>
+
+          )}
+
+        </section>
+
+
+        {/* =========================
+            SAVED JOBS
+        ========================== */}
+
+        <section
+          className="saved-jobs-section"
+          id="saved-jobs"
         >
 
-          <div>
+          <div className="profile-heading">
 
-            <h3>
-              {savedJob.title}
-            </h3>
+            <h2>
+              Saved Jobs
+            </h2>
 
             <p>
-              {savedJob.company}
+              Jobs you've saved for later.
             </p>
-
-            <span>
-              📍 {savedJob.location}
-            </span>
 
           </div>
 
-          <button
-            onClick={() =>
-              navigate(`/jobs/${savedJob.id}`)
-            }
-          >
-            View Job
-          </button>
 
-        </div>
+          {savedJobs.length === 0 ? (
 
-      ))}
+            <div className="no-saved-jobs">
 
-    </div>
+              <p>
+                You haven't saved any
+                jobs yet.
+              </p>
 
-  )}
+              <button
+                onClick={() =>
+                  navigate("/jobs")
+                }
+              >
+                Browse Jobs
+              </button>
 
-</section>
+            </div>
+
+          ) : (
+
+            <div className="saved-jobs-list">
+
+              {savedJobs.map(
+                (savedJob) => {
+
+                  const job =
+                    savedJob.jobs;
+
+                  return (
+
+                    <div
+                      className="saved-job-card"
+                      key={savedJob.id}
+                    >
+
+                      <div>
+
+                        <h3>
+                          {job?.title ||
+                            "Job"}
+                        </h3>
+
+                        <p>
+                          {job?.company ||
+                            "Company"}
+                        </p>
+
+                        <span>
+                          📍{" "}
+                          {job?.location ||
+                            "Location not provided"}
+                        </span>
+
+                      </div>
+
+
+                      <button
+                        onClick={() =>
+                          navigate(
+                            `/jobs/${job?.id}`
+                          )
+                        }
+                      >
+                        View Job
+                      </button>
+
+                      <button
+                        className="remove-saved-button"
+                        onClick={() =>
+                          handleRemoveSavedJob(savedJob.id)
+                        }
+                      >
+                        Remove
+                      </button>
+
+                    </div>
+
+                  );
+                }
+              )}
+
+            </div>
+
+          )}
+
+        </section>
+
       </main>
 
     </div>
+  );
+}
+
+
+/* =========================
+   PROFILE COMPLETION
+========================= */
+
+function calculateProfileCompletion(
+  user,
+  bio,
+  location,
+  skills
+) {
+  let completed = 0;
+
+  if (
+    user?.user_metadata?.full_name
+  ) {
+    completed++;
+  }
+
+  if (user?.email) {
+    completed++;
+  }
+
+  if (location) {
+    completed++;
+  }
+
+  if (bio) {
+    completed++;
+  }
+
+  if (skills) {
+    completed++;
+  }
+
+  return Math.round(
+    (completed / 5) * 100
   );
 }
 

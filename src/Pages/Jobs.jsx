@@ -1,12 +1,13 @@
-import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { supabase } from "../supabaseClient";
 import JobCard from "../Components/JobCard";
 
 function Jobs() {
-  // Get search values from the URL
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
-  // Search states
+  // Search and filter states
   const [search, setSearch] = useState(
     searchParams.get("search") || ""
   );
@@ -17,78 +18,53 @@ function Jobs() {
 
   const [jobType, setJobType] = useState("All");
 
-  // Demo jobs
-  const jobs = [
-    {
-      id: 1,
-      logo: "TZ",
-      title: "Junior Software Developer",
-      company: "TechZim Solutions",
-      location: "Remote",
-      type: "Full-time",
-      salary: "$400 - $700/month",
-    },
+  // Jobs from Supabase
+  const [jobs, setJobs] = useState([]);
 
-    {
-      id: 2,
-      logo: "C",
-      title: "UI/UX Design Intern",
-      company: "CreativeHub",
-      location: "Harare",
-      type: "Internship",
-      salary: "$250/month",
-    },
+  const [loading, setLoading] = useState(true);
 
-    {
-      id: 3,
-      logo: "M",
-      title: "Digital Marketing Assistant",
-      company: "MarketWave",
-      location: "Bulawayo",
-      type: "Full-time",
-      salary: "$300 - $500/month",
-    },
+  // Get jobs from Supabase
+  useEffect(() => {
+    const fetchJobs = async () => {
+      const { data, error } = await supabase
+        .from("jobs")
+        .select("*")
+        .order("created_at", {
+          ascending: false,
+        });
 
-    {
-      id: 4,
-      logo: "D",
-      title: "Junior Software Engineer",
-      company: "DevAfrica",
-      location: "Remote",
-      type: "Full-time",
-      salary: "$500 - $800/month",
-    },
+      if (error) {
+        console.error(
+          "Error fetching jobs:",
+          error
+        );
 
-    {
-      id: 5,
-      logo: "G",
-      title: "Graphic Design Intern",
-      company: "Growth Studio",
-      location: "Harare",
-      type: "Internship",
-      salary: "$200/month",
-    },
+        setLoading(false);
+        return;
+      }
 
-    {
-      id: 6,
-      logo: "S",
-      title: "Customer Support Assistant",
-      company: "StartUpZW",
-      location: "Remote",
-      type: "Part-time",
-      salary: "$250 - $400/month",
-    },
-  ];
+      setJobs(data || []);
+      setLoading(false);
+    };
+
+    fetchJobs();
+  }, []);
 
   // Filter jobs
   const filteredJobs = jobs.filter((job) => {
     const matchesSearch =
-      job.title.toLowerCase().includes(search.toLowerCase()) ||
-      job.company.toLowerCase().includes(search.toLowerCase());
+      job.title
+        ?.toLowerCase()
+        .includes(search.toLowerCase()) ||
+      job.company
+        ?.toLowerCase()
+        .includes(search.toLowerCase());
 
     const matchesLocation =
       location === "" ||
-      job.location.toLowerCase().includes(location.toLowerCase());
+      job.location
+        ?.toLowerCase()
+        .includes(location.toLowerCase());
 
     const matchesType =
       jobType === "All" ||
@@ -101,132 +77,198 @@ function Jobs() {
     );
   });
 
+  // Loading screen
+  if (loading) {
+    return (
+      <div className="loading">
+        <h2>Loading jobs...</h2>
+      </div>
+    );
+  }
+
   return (
     <div className="jobs-page">
 
-      {/* Header */}
-      <div className="jobs-header">
-        <h1>Find your next opportunity</h1>
+      {/* PAGE HEADER */}
+
+      <section className="jobs-header">
+
+        <h1>Find Your Next Opportunity</h1>
 
         <p>
-          Search jobs and opportunities designed
-          for emerging talent.
+          Discover jobs, internships, and
+          opportunities that match your skills.
         </p>
-      </div>
 
-      {/* Search */}
-      <div className="jobs-search">
+      </section>
 
-        <input
-          type="text"
-          placeholder="Job title or keyword"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
 
-        <input
-          type="text"
-          placeholder="Location"
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-        />
+      {/* SEARCH AREA */}
 
-        <select
-          value={jobType}
-          onChange={(e) => setJobType(e.target.value)}
-        >
-          <option value="All">
-            All job types
-          </option>
+      <section className="jobs-search-section">
 
-          <option value="Full-time">
-            Full-time
-          </option>
+        <div className="jobs-search-box">
 
-          <option value="Part-time">
-            Part-time
-          </option>
+          {/* SEARCH */}
 
-          <option value="Internship">
-            Internship
-          </option>
-        </select>
+          <input
+            type="text"
+            placeholder="Job title, skill or keyword"
+            value={search}
+            onChange={(e) =>
+              setSearch(e.target.value)
+            }
+          />
 
-      </div>
+          {/* LOCATION */}
 
-      {/* Jobs content */}
-      <div className="jobs-content">
+          <input
+            type="text"
+            placeholder="Location"
+            value={location}
+            onChange={(e) =>
+              setLocation(e.target.value)
+            }
+          />
 
-        {/* Filters */}
-        <aside className="filters">
+          {/* JOB TYPE */}
 
-          <h3>Filter Jobs</h3>
-
-          <label>Job Type</label>
-
-          <button onClick={() => setJobType("All")}>
-            All Jobs
-          </button>
-
-          <button
-            onClick={() => setJobType("Full-time")}
+          <select
+            value={jobType}
+            onChange={(e) =>
+              setJobType(e.target.value)
+            }
           >
-            Full-time
-          </button>
 
-          <button
-            onClick={() => setJobType("Part-time")}
-          >
-            Part-time
-          </button>
+            <option value="All">
+              All Job Types
+            </option>
 
-          <button
-            onClick={() => setJobType("Internship")}
-          >
-            Internship
-          </button>
+            <option value="Full-time">
+              Full-time
+            </option>
 
-        </aside>
+            <option value="Part-time">
+              Part-time
+            </option>
 
-        {/* Job results */}
-        <main className="job-results">
+            <option value="Internship">
+              Internship
+            </option>
 
-          <div className="results-header">
+            <option value="Contract">
+              Contract
+            </option>
+
+            <option value="Remote">
+              Remote
+            </option>
+
+          </select>
+
+        </div>
+
+      </section>
+
+
+      {/* RESULTS */}
+
+      <section className="jobs-results">
+
+        <div className="jobs-results-header">
+
+          <h2>
+            {filteredJobs.length} Jobs Found
+          </h2>
+
+          {(search ||
+            location ||
+            jobType !== "All") && (
+
+            <button
+              className="clear-filters"
+              onClick={() => {
+                setSearch("");
+                setLocation("");
+                setJobType("All");
+              }}
+            >
+              Clear Filters
+            </button>
+
+          )}
+
+        </div>
+
+
+        {/* NO JOBS */}
+
+        {filteredJobs.length === 0 ? (
+
+          <div className="no-jobs">
+
             <h2>
-              {filteredJobs.length} Jobs Found
+              No jobs found
             </h2>
+
+            <p>
+              Try changing your search or
+              filters.
+            </p>
+
           </div>
+
+        ) : (
+
+          /* JOB CARDS */
 
           <div className="jobs-grid">
 
-            {filteredJobs.length > 0 ? (
+            {filteredJobs.map((job) => (
 
-              filteredJobs.map((job) => (
+              <div
+                className="job-card-wrapper"
+                key={job.id}
+              >
+
                 <JobCard
-                  key={job.id}
-                  id={job.id}
-                  logo={job.logo}
+                  logo={
+                    job.company
+                      ? job.company.charAt(0)
+                      : "S"
+                  }
+
                   title={job.title}
+
                   company={job.company}
+
                   location={job.location}
+
                   type={job.type}
+
                   salary={job.salary}
                 />
-              ))
 
-            ) : (
+                <button
+                  className="view-job-button"
+                  onClick={() =>
+                    navigate(
+                      `/jobs/${job.id}`
+                    )
+                  }
+                >
+                  View Job
+                </button>
 
-              <p className="no-results">
-                No jobs found. Try another search.
-              </p>
+              </div>
 
-            )}
+            ))}
 
           </div>
 
-        </main>
+        )}
 
-      </div>
+      </section>
 
     </div>
   );
