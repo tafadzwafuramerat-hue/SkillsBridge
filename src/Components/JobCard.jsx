@@ -1,5 +1,6 @@
+import { FaBriefcase, FaHeart, FaMapMarkerAlt } from "react-icons/fa";
+
 function JobCard({
-  id,
   title,
   company,
   location,
@@ -15,8 +16,8 @@ function JobCard({
           {logo}
         </div>
 
-        <button className="save-job">
-          ♡
+        <button className="save-job" aria-label="Save job" type="button">
+          <FaHeart aria-hidden="true" />
         </button>
       </div>
 
@@ -27,8 +28,8 @@ function JobCard({
       </p>
 
       <div className="job-info">
-        <span>📍 {location}</span>
-        <span>💼 {type}</span>
+        <span><FaMapMarkerAlt aria-hidden="true" /> {location}</span>
+        <span><FaBriefcase aria-hidden="true" /> {type}</span>
       </div>
 
       <div className="job-bottom">

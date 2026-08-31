@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
+import { FaArrowLeft } from "react-icons/fa";
 
 function Apply() {
   const { id } = useParams();
@@ -9,65 +10,81 @@ function Apply() {
   const [user, setUser] = useState(null);
   const [job, setJob] = useState(null);
 
-  const [phone, setPhone] = useState("");
-  const [cv, setCv] = useState("");
-  const [coverLetter, setCoverLetter] = useState("");
-
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  // Get logged-in user and selected job
+  const [coverLetter, setCoverLetter] = useState("");
+  const [phone, setPhone] = useState("");
+  const [cv, setCv] = useState("");
+
   useEffect(() => {
-    const loadApplicationData = async () => {
-      try {
-        // Get current user
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+    const loadApplicationPage = async () => {
+      setLoading(true);
 
-        setUser(user);
+      // =========================
+      // GET CURRENT USER
+      // =========================
 
-        // Get job from Supabase
-        const { data: jobData, error: jobError } =
-          await supabase
-            .from("jobs")
-            .select("*")
-            .eq("id", id)
-            .single();
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
 
-        if (jobError) {
-          console.error(
-            "Error fetching job:",
-            jobError
-          );
-
-          setJob(null);
-          setLoading(false);
-          return;
-        }
-
-        setJob(jobData);
+      if (!currentUser) {
         setLoading(false);
-      } catch (error) {
-        console.error(error);
-        setLoading(false);
+        navigate("/login");
+        return;
       }
+
+      setUser(currentUser);
+
+      // =========================
+      // GET JOB FROM SUPABASE
+      // =========================
+
+      const { data: jobData, error: jobError } =
+        await supabase
+          .from("jobs")
+          .select("*")
+          .eq("id", id)
+          .single();
+
+      if (jobError) {
+        console.error(
+          "Error loading job:",
+          jobError
+        );
+
+        setLoading(false);
+        return;
+      }
+
+      setJob(jobData);
+
+      setLoading(false);
     };
 
-    loadApplicationData();
-  }, [id]);
+    loadApplicationPage();
+  }, [id, navigate]);
 
-  // Submit application
+  // =========================
+  // SUBMIT APPLICATION
+  // =========================
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!phone || !coverLetter) {
-      alert("Please complete all required fields.");
+      alert(
+        "Please complete all required fields."
+      );
       return;
     }
 
     if (!user) {
-      alert("Please log in before applying.");
+      alert(
+        "Please log in before applying."
+      );
+
       navigate("/login");
       return;
     }
@@ -79,47 +96,62 @@ function Apply() {
 
     setSubmitting(true);
 
-    // Check whether user already applied
-    const { data: existingApplication, error: checkError } =
-      await supabase
-        .from("applications")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("job_id", job.id)
-        .maybeSingle();
+    // =========================
+    // CHECK FOR EXISTING APPLICATION
+    // =========================
 
-    if (checkError) {
+    const {
+      data: existingApplication,
+      error: existingError,
+    } = await supabase
+      .from("applications")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("job_id", job.id)
+      .maybeSingle();
+
+    if (existingError) {
       console.error(
         "Error checking application:",
-        checkError
+        existingError
       );
 
-      alert(checkError.message);
+      alert(existingError.message);
       setSubmitting(false);
       return;
     }
 
     if (existingApplication) {
-      alert("You have already applied for this job.");
+      alert(
+        "You have already applied for this job."
+      );
+
+      setSubmitting(false);
       navigate("/dashboard");
       return;
     }
 
-    // Insert application into Supabase
+    // =========================
+    // CREATE APPLICATION
+    // =========================
+
     const { error } = await supabase
       .from("applications")
       .insert({
         user_id: user.id,
         job_id: job.id,
+
         phone: phone,
         cv: cv,
+
         cover_letter: coverLetter,
+
         status: "Applied",
       });
 
     if (error) {
       console.error(
-        "Application submission error:",
+        "Application submission failed:",
         error
       );
 
@@ -128,45 +160,72 @@ function Apply() {
       return;
     }
 
-    alert("Application submitted successfully!");
+    // =========================
+    // SUCCESS
+    // =========================
+
+    alert(
+      "Application submitted successfully!"
+    );
+
+    setSubmitting(false);
 
     navigate("/dashboard");
   };
 
-  // Loading
+  // =========================
+  // LOADING
+  // =========================
+
   if (loading) {
     return (
-      <div className="loading">
-        <h2>Loading application...</h2>
+      <div className="dashboard-message">
+        <h2>
+          Loading application...
+        </h2>
       </div>
     );
   }
 
-  // Job not found
+  // =========================
+  // JOB NOT FOUND
+  // =========================
+
   if (!job) {
     return (
       <div className="not-found">
-        <h2>Job not found</h2>
+
+        <h2>
+          Job not found
+        </h2>
 
         <p>
-          We couldn't find this job.
+          The job you're trying to apply
+          for doesn't exist.
         </p>
 
         <button
-          onClick={() => navigate("/jobs")}
+          onClick={() =>
+            navigate("/jobs")
+          }
         >
           Back to Jobs
         </button>
+
       </div>
     );
   }
+
+  // =========================
+  // APPLICATION PAGE
+  // =========================
 
   return (
     <div className="apply-page">
 
       <div className="apply-container">
 
-        {/* Back button */}
+        {/* BACK BUTTON */}
 
         <button
           className="back-button"
@@ -174,11 +233,11 @@ function Apply() {
             navigate(`/jobs/${id}`)
           }
         >
-          ←  Back to Job
+          <FaArrowLeft aria-hidden="true" /> Back to Job
         </button>
 
 
-        {/* Header */}
+        {/* HEADER */}
 
         <div className="apply-header">
 
@@ -190,24 +249,22 @@ function Apply() {
             {job.title} at {job.company}
           </p>
 
-          <p>
-            📍 {job.location}
-          </p>
-
         </div>
 
 
-        {/* Form */}
+        {/* FORM */}
 
         <form
           className="application-form"
           onSubmit={handleSubmit}
         >
 
-          <h2>Your Information</h2>
+          <h2>
+            Your Information
+          </h2>
 
 
-          {/* Full Name */}
+          {/* NAME */}
 
           <label>
             Full Name
@@ -216,13 +273,14 @@ function Apply() {
           <input
             type="text"
             value={
-              user?.user_metadata?.full_name || ""
+              user?.user_metadata?.full_name ||
+              ""
             }
             disabled
           />
 
 
-          {/* Email */}
+          {/* EMAIL */}
 
           <label>
             Email
@@ -230,15 +288,18 @@ function Apply() {
 
           <input
             type="email"
-            value={user?.email || ""}
+            value={
+              user?.email || ""
+            }
             disabled
           />
 
 
-          {/* Phone */}
+          {/* PHONE */}
 
           <label>
-            Phone Number <span>*</span>
+            Phone Number{" "}
+            <span>*</span>
           </label>
 
           <input
@@ -268,10 +329,11 @@ function Apply() {
           />
 
 
-          {/* Cover Letter */}
+          {/* COVER LETTER */}
 
           <label>
-            Cover Letter <span>*</span>
+            Cover Letter{" "}
+            <span>*</span>
           </label>
 
           <textarea
@@ -284,7 +346,7 @@ function Apply() {
           />
 
 
-          {/* Submit */}
+          {/* SUBMIT */}
 
           <button
             type="submit"

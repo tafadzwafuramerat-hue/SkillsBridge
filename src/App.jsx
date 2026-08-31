@@ -8,6 +8,7 @@ import Login from "./Pages/Login";
 import Navbar from "./Components/Navbar";
 import Dashboard from "./Pages/Dashboard";
 import Apply from "./Pages/Apply";
+import EmployerDashboard from "./Employer/EmployerDashboard";
 function App() {
   return (
     <BrowserRouter>
@@ -55,7 +56,11 @@ function AppRoutes() {
     path="/dashboard"
     element={<Dashboard />}
   />
-  
+    <Route
+          path="/employer-dashboard"
+          element={<EmployerDashboard />}
+        />
+
 
       </Routes>
     </>

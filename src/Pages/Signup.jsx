@@ -8,12 +8,16 @@ function Signup() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState("job_seeker");
   const [loading, setLoading] = useState(false);
 
   const handleSignup = async (e) => {
     e.preventDefault();
 
-    if (!name || !email || !password) {
+    const cleanName = name.trim();
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanName || !cleanEmail || !password) {
       alert("Please fill in all fields.");
       return;
     }
@@ -25,13 +29,14 @@ function Signup() {
 
     setLoading(true);
 
-    // Create account in Supabase Auth
+    // Create Supabase Auth account
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: cleanEmail,
       password,
       options: {
         data: {
-          full_name: name,
+          full_name: cleanName,
+          role: role,
         },
       },
     });
@@ -42,14 +47,15 @@ function Signup() {
       return;
     }
 
-    // Create the user's profile
+    // Create profile
     if (data.user) {
       const { error: profileError } = await supabase
         .from("profiles")
         .upsert({
           id: data.user.id,
-          full_name: name,
-          email: email,
+          full_name: cleanName,
+          email: cleanEmail,
+          role: role,
           bio: "",
           location: "",
           skills: "",
@@ -57,12 +63,12 @@ function Signup() {
 
       if (profileError) {
         console.error(
-          "Profile creation failed:",
+          "Profile error:",
           profileError
         );
 
         alert(
-          "Account was created, but your profile could not be created."
+          `Account was created, but your profile could not be created: ${profileError.message}`
         );
 
         setLoading(false);
@@ -73,10 +79,10 @@ function Signup() {
     setLoading(false);
 
     alert(
-      "Account created successfully! Please check your email to confirm your account."
+      "Account created successfully!"
     );
 
-    navigate("/login");
+    navigate("/dashboard");
   };
 
   return (
@@ -91,7 +97,7 @@ function Signup() {
         </div>
 
 
-        {/* HEADER */}
+        {/* TITLE */}
 
         <h1>
           Create your account
@@ -120,7 +126,6 @@ function Signup() {
             onChange={(e) =>
               setName(e.target.value)
             }
-            required
           />
 
 
@@ -137,7 +142,6 @@ function Signup() {
             onChange={(e) =>
               setEmail(e.target.value)
             }
-            required
           />
 
 
@@ -154,8 +158,69 @@ function Signup() {
             onChange={(e) =>
               setPassword(e.target.value)
             }
-            required
           />
+
+
+          {/* ACCOUNT TYPE */}
+
+          <label>
+            I am joining SkillBridge as:
+          </label>
+
+          <div className="role-selection">
+
+            <label className="role-option">
+
+              <input
+                type="radio"
+                name="role"
+                value="job_seeker"
+                checked={role === "job_seeker"}
+                onChange={(e) =>
+                  setRole(e.target.value)
+                }
+              />
+
+              <div>
+                <strong>
+                  Job Seeker
+                </strong>
+
+                <small>
+                  Find jobs and apply for
+                  opportunities.
+                </small>
+              </div>
+
+            </label>
+
+
+            <label className="role-option">
+
+              <input
+                type="radio"
+                name="role"
+                value="employer"
+                checked={role === "employer"}
+                onChange={(e) =>
+                  setRole(e.target.value)
+                }
+              />
+
+              <div>
+                <strong>
+                  Employer
+                </strong>
+
+                <small>
+                  Post jobs and find talented
+                  candidates.
+                </small>
+              </div>
+
+            </label>
+
+          </div>
 
 
           {/* SUBMIT */}
@@ -166,21 +231,23 @@ function Signup() {
             disabled={loading}
           >
             {loading
-              ? "Creating account..."
+              ? "Creating Account..."
               : "Create Account"}
           </button>
 
         </form>
 
 
-        {/* LOGIN LINK */}
+        {/* LOGIN */}
 
         <p className="auth-switch">
+
           Already have an account?{" "}
 
           <Link to="/login">
             Log in
           </Link>
+
         </p>
 
       </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
+import { FaArrowLeft, FaBriefcase, FaMapMarkerAlt, FaMoneyBillWave } from "react-icons/fa";
 
 function JobDetails() {
   const { id } = useParams();
@@ -8,86 +9,109 @@ function JobDetails() {
 
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
 
-  // Fetch job
+  const [user, setUser] = useState(null);
+  const [isSaved, setIsSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+
   useEffect(() => {
-    const fetchJob = async () => {
-      const { data, error } = await supabase
+    const fetchJobAndSavedStatus = async () => {
+      setLoading(true);
+
+      // Get logged-in user
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
+
+      setUser(currentUser);
+
+      // Get job
+      const { data: jobData, error: jobError } = await supabase
         .from("jobs")
         .select("*")
         .eq("id", id)
         .single();
 
-      if (error) {
-        console.error("Error fetching job:", error);
+      if (jobError) {
+        console.error(
+          "Error fetching job:",
+          jobError
+        );
+
         setLoading(false);
         return;
       }
 
-      setJob(data);
+      setJob(jobData);
+
+      // Check whether this job is already saved
+      if (currentUser) {
+        const { data: savedJob, error: savedError } =
+          await supabase
+            .from("saved_jobs")
+            .select("id")
+            .eq("user_id", currentUser.id)
+            .eq("job_id", id)
+            .maybeSingle();
+
+        if (savedError) {
+          console.error(
+            "Error checking saved job:",
+            savedError
+          );
+        }
+
+        setIsSaved(!!savedJob);
+      }
+
       setLoading(false);
     };
 
-    fetchJob();
+    fetchJobAndSavedStatus();
   }, [id]);
 
-  // Check whether the job is already saved
-  useEffect(() => {
-    const checkSavedJob = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+  // =========================
+  // SAVE / REMOVE JOB
+  // =========================
 
-      if (!user) {
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("saved_jobs")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("job_id", id)
-        .maybeSingle();
-
-      if (error) {
-        console.error(
-          "Error checking saved job:",
-          error
-        );
-        return;
-      }
-
-      if (data) {
-        setIsSaved(true);
-      }
-    };
-
-    checkSavedJob();
-  }, [id]);
-
-  // Save job
   const handleSaveJob = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    // User is not logged in
+    // User isn't logged in
     if (!user) {
       alert("Please log in to save jobs.");
       navigate("/login");
       return;
     }
 
-    // Prevent duplicate saves
+    setSaving(true);
+
+    // If already saved → remove it
     if (isSaved) {
-      alert("You have already saved this job.");
+      const { error } = await supabase
+        .from("saved_jobs")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("job_id", id);
+
+      if (error) {
+        console.error(
+          "Error removing saved job:",
+          error
+        );
+
+        alert(error.message);
+        setSaving(false);
+        return;
+      }
+
+      setIsSaved(false);
+      setSaving(false);
+
+      alert("Job removed from saved jobs.");
+
       return;
     }
 
-    setSaving(true);
-
+    // Otherwise → save the job
     const { error } = await supabase
       .from("saved_jobs")
       .insert({
@@ -101,7 +125,14 @@ function JobDetails() {
         error
       );
 
-      alert(error.message);
+      // Duplicate save
+      if (error.code === "23505") {
+        setIsSaved(true);
+        alert("This job is already saved.");
+      } else {
+        alert(error.message);
+      }
+
       setSaving(false);
       return;
     }
@@ -112,7 +143,24 @@ function JobDetails() {
     alert("Job saved successfully!");
   };
 
-  // Loading
+  // =========================
+  // APPLY
+  // =========================
+
+  const handleApply = () => {
+    if (!user) {
+      alert("Please log in to apply for jobs.");
+      navigate("/login");
+      return;
+    }
+
+    navigate(`/jobs/${id}/apply`);
+  };
+
+  // =========================
+  // LOADING
+  // =========================
+
   if (loading) {
     return (
       <div className="loading">
@@ -121,7 +169,10 @@ function JobDetails() {
     );
   }
 
-  // Job not found
+  // =========================
+  // JOB NOT FOUND
+  // =========================
+
   if (!job) {
     return (
       <div className="no-jobs">
@@ -141,8 +192,21 @@ function JobDetails() {
     );
   }
 
+  // =========================
+  // PAGE
+  // =========================
+
   return (
     <div className="job-details-page">
+
+      {/* BACK BUTTON */}
+
+      <button
+        className="back-button"
+        onClick={() => navigate("/jobs")}
+      >
+        <FaArrowLeft aria-hidden="true" /> Back to Jobs
+      </button>
 
       <div className="job-details">
 
@@ -153,7 +217,8 @@ function JobDetails() {
           <div className="details-header">
 
             <div className="details-logo">
-              {job.company?.charAt(0)}
+              {job.company?.charAt(0)?.toUpperCase() ||
+                "J"}
             </div>
 
             <div>
@@ -168,17 +233,21 @@ function JobDetails() {
 
               <div className="details-info">
 
-                <span>
-                  📍 {job.location}
-                </span>
+                {job.location && (
+                  <span>
+                    <FaMapMarkerAlt aria-hidden="true" /> {job.location}
+                  </span>
+                )}
 
-                <span>
-                  💼 {job.type}
-                </span>
+                {job.type && (
+                  <span>
+                    <FaBriefcase aria-hidden="true" /> {job.type}
+                  </span>
+                )}
 
                 {job.salary && (
                   <span>
-                    💰 {job.salary}
+                    <FaMoneyBillWave aria-hidden="true" /> {job.salary}
                   </span>
                 )}
 
@@ -188,9 +257,7 @@ function JobDetails() {
 
           </div>
 
-
           <hr />
-
 
           {/* DESCRIPTION */}
 
@@ -207,7 +274,6 @@ function JobDetails() {
 
           </section>
 
-
           {/* RESPONSIBILITIES */}
 
           <section>
@@ -216,11 +282,10 @@ function JobDetails() {
               Responsibilities
             </h2>
 
-            {job.responsibilities &&
+            {Array.isArray(job.responsibilities) &&
             job.responsibilities.length > 0 ? (
 
               <ul>
-
                 {job.responsibilities.map(
                   (responsibility, index) => (
                     <li key={index}>
@@ -228,7 +293,6 @@ function JobDetails() {
                     </li>
                   )
                 )}
-
               </ul>
 
             ) : (
@@ -241,7 +305,6 @@ function JobDetails() {
 
           </section>
 
-
           {/* REQUIREMENTS */}
 
           <section>
@@ -250,11 +313,10 @@ function JobDetails() {
               Requirements
             </h2>
 
-            {job.requirements &&
+            {Array.isArray(job.requirements) &&
             job.requirements.length > 0 ? (
 
               <ul>
-
                 {job.requirements.map(
                   (requirement, index) => (
                     <li key={index}>
@@ -262,7 +324,6 @@ function JobDetails() {
                     </li>
                   )
                 )}
-
               </ul>
 
             ) : (
@@ -277,8 +338,7 @@ function JobDetails() {
 
         </main>
 
-
-        {/* SIDE CARD */}
+        {/* APPLY / SAVE CARD */}
 
         <aside className="apply-card">
 
@@ -291,18 +351,14 @@ function JobDetails() {
             take the next step in your career.
           </p>
 
-
           {/* APPLY */}
 
           <button
             className="apply-button"
-            onClick={() =>
-              navigate(`/jobs/${id}/apply`)
-            }
+            onClick={handleApply}
           >
             Apply Now
           </button>
-
 
           {/* SAVE */}
 
@@ -312,9 +368,9 @@ function JobDetails() {
             disabled={saving}
           >
             {saving
-              ? "Saving..."
+              ? "Please wait..."
               : isSaved
-              ? "Saved ✓"
+              ? "✓ Saved — Remove"
               : "Save Job"}
           </button>
 

@@ -4,6 +4,14 @@ import { supabase } from "../supabaseClient";
 
 import CategoryCard from "../Components/CategoryCard";
 import JobCard from "../Components/JobCard";
+import {
+  FaBullhorn,
+  FaChartBar,
+  FaCode,
+  FaHeadset,
+  FaPalette,
+  FaArrowRight,
+} from "react-icons/fa";
 
 function Home() {
 
@@ -66,7 +74,7 @@ console.log("Supabase connected:", supabase);
           <h2>Popular Categories</h2>
 
           <Link to="/jobs">
-            View all categories →
+            View all categories <FaArrowRight aria-hidden="true" />
           </Link>
 
         </div>
@@ -74,37 +82,37 @@ console.log("Supabase connected:", supabase);
         <div className="category-grid">
 
           <CategoryCard
-            icon="💻"
+            icon={<FaCode aria-hidden="true" />}
             title="Development"
             jobs="1,245"
           />
 
           <CategoryCard
-            icon=""
+            icon={<FaPalette aria-hidden="true" />}
             title="Design"
             jobs="842"
           />
 
           <CategoryCard
-            icon=""
+            icon={<FaBullhorn aria-hidden="true" />}
             title="Marketing"
             jobs="634"
           />
 
           <CategoryCard
-            icon=""
+            icon={<FaChartBar aria-hidden="true" />}
             title="Data Science"
             jobs="421"
           />
 
           <CategoryCard
-            icon=""
+            icon={<FaHeadset aria-hidden="true" />}
             title="Customer Support"
             jobs="318"
           />
 
           <CategoryCard
-            icon=""
+            icon={<FaArrowRight aria-hidden="true" />}
             title="More"
             jobs="Explore"
           />
@@ -121,7 +129,7 @@ console.log("Supabase connected:", supabase);
           <h2>Featured Jobs</h2>
 
           <Link to="/jobs">
-            View all jobs →
+            View all jobs <FaArrowRight aria-hidden="true" />
           </Link>
 
         </div>

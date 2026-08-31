@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
+import { FaMapMarkerAlt } from "react-icons/fa";
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -139,7 +140,7 @@ function Dashboard() {
 
       setLoading(false);
     });
-  }, []);
+  }, [navigate]);
 
   // Save profile
   const handleSaveProfile = async (e) => {
@@ -557,6 +558,9 @@ function Dashboard() {
 
                   const job =
                     application.jobs;
+                  const applicationStatus = String(
+                    application.status || "applied"
+                  );
 
                   return (
 
@@ -578,7 +582,7 @@ function Dashboard() {
                         </p>
 
                         <span>
-                          📍{" "}
+                          <FaMapMarkerAlt aria-hidden="true" />{" "}
                           {job?.location ||
                             "Location not provided"}
                         </span>
@@ -586,9 +590,12 @@ function Dashboard() {
                       </div>
 
 
-                      <div className="application-status">
-                        {application.status ||
-                          "Applied"}
+                      <div
+                        className={`application-status ${applicationStatus
+                          .toLowerCase()
+                          .replace(/\s+/g, "-")}`}
+                      >
+                        {application.status || "Applied"}
                       </div>
 
                     </div>
@@ -675,7 +682,7 @@ function Dashboard() {
                         </p>
 
                         <span>
-                          📍{" "}
+                          <FaMapMarkerAlt aria-hidden="true" />{" "}
                           {job?.location ||
                             "Location not provided"}
                         </span>
