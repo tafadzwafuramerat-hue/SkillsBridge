@@ -58,10 +58,12 @@ function Login() {
       return;
     }
 
+    const userRole = profile?.role || currentUser.user_metadata?.role || "job_seeker";
+
     setLoading(false);
 
     // Send user to the correct dashboard
-    if (profile?.role === "employer") {
+    if (userRole === "employer") {
       navigate("/employer-dashboard");
     } else {
       navigate("/dashboard");

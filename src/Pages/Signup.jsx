@@ -42,6 +42,7 @@ function Signup() {
     });
 
     if (error) {
+      console.error("Signup error:", error);
       alert(error.message);
       setLoading(false);
       return;
@@ -62,10 +63,7 @@ function Signup() {
         });
 
       if (profileError) {
-        console.error(
-          "Profile error:",
-          profileError
-        );
+        console.error("Profile error:", profileError);
 
         alert(
           `Account was created, but your profile could not be created: ${profileError.message}`
@@ -78,11 +76,14 @@ function Signup() {
 
     setLoading(false);
 
-    alert(
-      "Account created successfully!"
-    );
+    const destination =
+      role === "employer"
+        ? "/employer-dashboard"
+        : "/dashboard";
 
-    navigate("/dashboard");
+    alert("Account created successfully!");
+
+    navigate(destination);
   };
 
   return (
@@ -163,11 +164,13 @@ function Signup() {
 
           {/* ACCOUNT TYPE */}
 
-          <label>
+          <label className="account-type-label">
             I am joining SkillBridge as:
           </label>
 
           <div className="role-selection">
+
+            {/* JOB SEEKER */}
 
             <label className="role-option">
 
@@ -194,6 +197,8 @@ function Signup() {
 
             </label>
 
+
+            {/* EMPLOYER */}
 
             <label className="role-option">
 

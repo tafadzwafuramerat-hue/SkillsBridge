@@ -9,6 +9,7 @@ function EmployerDashboard() {
   const [jobs, setJobs] = useState([]);
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deletingJobId, setDeletingJobId] = useState(null);
 
   useEffect(() => {
     const loadEmployerDashboard = async () => {
@@ -21,6 +22,32 @@ function EmployerDashboard() {
 
       if (!currentUser) {
         navigate("/login");
+        return;
+      }
+
+      // Get employer profile
+      const { data: profileData, error: profileError } =
+        await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", currentUser.id)
+          .maybeSingle();
+
+      if (profileError) {
+        console.error(
+          "Employer role load failed:",
+          profileError
+        );
+      }
+
+      const userRole =
+        profileData?.role ||
+        currentUser.user_metadata?.role ||
+        "job_seeker";
+
+      // Make sure this is an employer
+      if (userRole !== "employer") {
+        navigate("/dashboard");
         return;
       }
 
@@ -68,8 +95,15 @@ function EmployerDashboard() {
         }
 
         setApplications(
-          applicationsData || []
+          (applicationsData || []).map((application) => ({
+            ...application,
+            job: jobsData.find(
+              (job) => job.id === application.job_id
+            ),
+          }))
         );
+      } else {
+        setApplications([]);
       }
 
       setLoading(false);
@@ -84,6 +118,76 @@ function EmployerDashboard() {
     navigate("/");
   };
 
+  // Delete job
+  const handleDeleteJob = async (jobId) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this job? This action cannot be undone."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingJobId(jobId);
+
+    // Delete applications belonging to this job first
+    const { error: applicationsError } = await supabase
+      .from("applications")
+      .delete()
+      .eq("job_id", jobId);
+
+    if (applicationsError) {
+      console.error(
+        "Error deleting job applications:",
+        applicationsError
+      );
+
+      alert(
+        `Could not delete the job applications: ${applicationsError.message}`
+      );
+
+      setDeletingJobId(null);
+      return;
+    }
+
+    // Delete the job
+    const { error: jobError } = await supabase
+      .from("jobs")
+      .delete()
+      .eq("id", jobId)
+      .eq("employer_id", user.id);
+
+    if (jobError) {
+      console.error(
+        "Error deleting job:",
+        jobError
+      );
+
+      alert(
+        `Could not delete the job: ${jobError.message}`
+      );
+
+      setDeletingJobId(null);
+      return;
+    }
+
+    // Remove job from UI
+    setJobs((currentJobs) =>
+      currentJobs.filter((job) => job.id !== jobId)
+    );
+
+    // Remove applications from UI
+    setApplications((currentApplications) =>
+      currentApplications.filter(
+        (application) => application.job_id !== jobId
+      )
+    );
+
+    setDeletingJobId(null);
+
+    alert("Job deleted successfully.");
+  };
+
   if (loading) {
     return (
       <div className="dashboard-message">
@@ -96,7 +200,6 @@ function EmployerDashboard() {
     <div className="dashboard">
 
       {/* SIDEBAR */}
-
       <aside className="dashboard-sidebar">
 
         <div className="dashboard-logo">
@@ -135,13 +238,7 @@ function EmployerDashboard() {
           </button>
 
           <button
-            onClick={() =>
-              document
-                .getElementById("employer-applications")
-                ?.scrollIntoView({
-                  behavior: "smooth",
-                })
-            }
+            onClick={() => navigate("/employer/applications")}
           >
             Applications
           </button>
@@ -157,22 +254,22 @@ function EmployerDashboard() {
 
       </aside>
 
-
       {/* MAIN CONTENT */}
-
       <main
         className="dashboard-main"
         id="employer-dashboard"
       >
 
         {/* HEADER */}
-
         <div className="dashboard-header">
 
           <div>
 
             <h1>
-              Welcome back!
+              Welcome back
+              {user?.user_metadata?.full_name
+                ? `, ${user.user_metadata.full_name}`
+                : "!"}
             </h1>
 
             <p>
@@ -182,47 +279,20 @@ function EmployerDashboard() {
 
           </div>
 
-          <button
-            className="apply-button"
-            onClick={() =>
-              navigate("/employer/post-job")
-            }
-          >
-            + Post a Job
-          </button>
-
         </div>
 
-
         {/* STATS */}
-
         <div className="dashboard-stats">
 
           <div className="stat-card">
-
-            <h3>
-              {jobs.length}
-            </h3>
-
-            <p>
-              Jobs Posted
-            </p>
-
+            <h3>{jobs.length}</h3>
+            <p>Jobs Posted</p>
           </div>
-
 
           <div className="stat-card">
-
-            <h3>
-              {applications.length}
-            </h3>
-
-            <p>
-              Applications
-            </p>
-
+            <h3>{applications.length}</h3>
+            <p>Applications</p>
           </div>
-
 
           <div className="stat-card">
 
@@ -236,17 +306,13 @@ function EmployerDashboard() {
               }
             </h3>
 
-            <p>
-              Under Review
-            </p>
+            <p>Under Review</p>
 
           </div>
 
         </div>
 
-
         {/* MY JOBS */}
-
         <section
           className="applications-section"
           id="employer-jobs"
@@ -256,9 +322,7 @@ function EmployerDashboard() {
 
             <div>
 
-              <h2>
-                My Jobs
-              </h2>
+              <h2>My Jobs</h2>
 
               <p>
                 Jobs you have posted on
@@ -267,8 +331,16 @@ function EmployerDashboard() {
 
             </div>
 
-          </div>
+            <button
+              className="post-job-button"
+              onClick={() =>
+                navigate("/employer/post-job")
+              }
+            >
+              Post a Job
+            </button>
 
+          </div>
 
           {jobs.length === 0 ? (
 
@@ -292,48 +364,105 @@ function EmployerDashboard() {
 
             <div className="applications-list">
 
-              {jobs.map((job) => (
+              {jobs.map((job) => {
 
-                <div
-                  className="application-card"
-                  key={job.id}
-                >
+                const jobApplications =
+                  applications.filter(
+                    (application) =>
+                      application.job_id === job.id
+                  );
 
-                  <div>
+                return (
 
-                    <h3>
-                      {job.title}
-                    </h3>
+                  <div
+                    className="application-card employer-job-card"
+                    key={job.id}
+                  >
 
-                    <p>
-                      {job.company}
-                    </p>
+                    <div className="employer-job-info">
 
-                    <span>
-                      📍 {job.location}
-                    </span>
+                      <h3>
+                        {job.title}
+                      </h3>
+
+                      <p>
+                        {job.company}
+                      </p>
+
+                      <span>
+                        📍 {job.location}
+                      </span>
+
+                      {job.type && (
+                        <span>
+                          💼 {job.type}
+                        </span>
+                      )}
+
+                      {job.salary && (
+                        <span>
+                          💰 {job.salary}
+                        </span>
+                      )}
+
+                    </div>
+
+                    <div className="employer-job-actions">
+
+                      <p className="applicant-count">
+                        {jobApplications.length}{" "}
+                        {jobApplications.length === 1
+                          ? "applicant"
+                          : "applicants"}
+                      </p>
+
+                      <div className="job-action-buttons">
+
+                        {/* VIEW */}
+                        <button
+                          className="view-job-button"
+                          onClick={() =>
+                            navigate(`/jobs/${job.id}`)
+                          }
+                        >
+                          View Job
+                        </button>
+
+                        {/* EDIT */}
+                        <button
+                          className="edit-job-button"
+                          onClick={() =>
+                            navigate(
+                              `/employer/edit-job/${job.id}`
+                            )
+                          }
+                        >
+                          Edit
+                        </button>
+
+                        {/* DELETE */}
+                        <button
+                          className="delete-job-button"
+                          onClick={() =>
+                            handleDeleteJob(job.id)
+                          }
+                          disabled={
+                            deletingJobId === job.id
+                          }
+                        >
+                          {deletingJobId === job.id
+                            ? "Deleting..."
+                            : "Delete"}
+                        </button>
+
+                      </div>
+
+                    </div>
 
                   </div>
 
-
-                  <div>
-
-                    <p>
-                      {
-                        applications.filter(
-                          (application) =>
-                            application.job_id ===
-                            job.id
-                        ).length
-                      }{" "}
-                      applicants
-                    </p>
-
-                  </div>
-
-                </div>
-
-              ))}
+                );
+              })}
 
             </div>
 
@@ -341,9 +470,7 @@ function EmployerDashboard() {
 
         </section>
 
-
         {/* APPLICATIONS */}
-
         <section
           className="applications-section"
           id="employer-applications"
@@ -353,9 +480,7 @@ function EmployerDashboard() {
 
             <div>
 
-              <h2>
-                Recent Applications
-              </h2>
+              <h2>Recent Applications</h2>
 
               <p>
                 Applicants who applied for
@@ -366,13 +491,12 @@ function EmployerDashboard() {
 
           </div>
 
-
           {applications.length === 0 ? (
 
             <div className="no-applications">
 
               <p>
-                You don't have any applications
+                You don't have any applicants
                 yet.
               </p>
 
@@ -394,13 +518,13 @@ function EmployerDashboard() {
                     <div>
 
                       <h3>
-                        {application.title ||
+                        {application.job?.title ||
                           "Job Application"}
                       </h3>
 
                       <p>
-                        Applicant ID:{" "}
-                        {application.user_id}
+                        {application.job?.company ||
+                          "Your job listing"}
                       </p>
 
                       <span>
@@ -413,7 +537,6 @@ function EmployerDashboard() {
                       </span>
 
                     </div>
-
 
                     <div className="application-status">
 

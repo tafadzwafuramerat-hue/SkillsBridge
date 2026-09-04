@@ -1410,6 +1410,63 @@ body {
   border: 1px solid #eeeeee;
 }
 
+.recommendations-section {
+  margin-top: 30px;
+}
+
+.recommendations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.recommendation-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  border: 1px solid #eeeeee;
+  border-radius: 10px;
+}
+
+.recommendation-card h3 {
+  margin-bottom: 6px;
+}
+
+.recommendation-card p {
+  margin-bottom: 6px;
+  color: #555555;
+}
+
+.recommendation-card span {
+  color: #777777;
+  font-size: 14px;
+}
+
+.recommendation-actions {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+.recommendation-actions strong {
+  color: #8f5965;
+  font-size: 14px;
+}
+
+.recommendation-actions button {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #d8a7b1;
+  color: #111111;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .no-applications {
   padding: 30px 0;
   text-align: center;
@@ -1698,6 +1755,56 @@ v/* APPLICATION PAGE */
   resize: vertical;
 }
 
+.tailor-cv-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  margin: -4px 0 24px;
+  padding: 13px 18px;
+  border: 1px solid #c98f9b;
+  border-radius: 8px;
+  background: #fff5f6;
+  color: #8f5965;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease,
+    color 0.2s ease, transform 0.2s ease;
+}
+
+.tailor-cv-button:hover:not(:disabled) {
+  border-color: #b87885;
+  background: #fcecef;
+  color: #75444f;
+  transform: translateY(-1px);
+}
+
+.tailor-cv-button:focus-visible {
+  outline: 3px solid rgba(201, 111, 126, 0.3);
+  outline-offset: 2px;
+}
+
+.tailor-cv-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.tailored-cv-preview {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #eeeeee;
+}
+
+.tailored-cv-preview p {
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 14px;
+  border-radius: 8px;
+  background: #fafafa;
+  white-space: pre-line;
+}
+
 .submit-application-button {
   width: 100%;
 
@@ -1914,10 +2021,16 @@ html {
   }
 
   .application-card,
-  .saved-job-card {
+  .saved-job-card,
+  .recommendation-card {
     align-items: flex-start;
     flex-direction: column;
     gap: 15px;
+  }
+
+  .recommendation-actions {
+    align-items: flex-start;
+    width: 100%;
   }
 
   .saved-job-actions {
@@ -2017,4 +2130,459 @@ html {
 .application-card span {
   color: #888;
   font-size: 14px;
+}
+/* =========================
+   ACCOUNT TYPE SELECTION
+========================= */
+
+.role-selection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 25px;
+}
+
+/* Each option */
+
+.role-option {
+  width: 100%;
+  min-height: 75px;
+  box-sizing: border-box;
+
+  display: flex;
+  align-items: center;
+
+  gap: 14px;
+
+  padding: 15px 18px;
+
+  border: 2px solid #e5e5e5;
+  border-radius: 12px;
+
+  background: #ffffff;
+
+  cursor: pointer;
+
+  transition: all 0.2s ease;
+}
+
+/* Hover */
+
+.role-option:hover {
+  border-color: #d8a7b1;
+  background: #fff9fa;
+}
+
+/* Selected option */
+
+.role-option:has(input[type="radio"]:checked) {
+  border-color: #d8a7b1;
+  background: #fff4f6;
+}
+
+/* Radio button */
+
+.role-option input[type="radio"] {
+  width: 18px;
+  height: 18px;
+
+  flex-shrink: 0;
+
+  margin: 0;
+
+  accent-color: #d8a7b1;
+
+  cursor: pointer;
+}
+
+/* Text container */
+
+.role-option div {
+  display: flex;
+  flex-direction: column;
+
+  gap: 5px;
+
+  flex: 1;
+}
+
+/* Title */
+
+.role-option strong {
+  display: block;
+
+  font-size: 15px;
+  font-weight: 700;
+
+  color: #111111;
+}
+
+/* Description */
+
+.role-option small {
+  display: block;
+
+  font-size: 13px;
+
+  color: #777777;
+
+  line-height: 1.4;
+}
+/* =========================================
+   POST JOB PAGE
+========================================= */
+
+.post-job-page {
+  min-height: 100vh;
+  background: #f8f7f7;
+  padding: 50px 8%;
+  box-sizing: border-box;
+}
+
+
+/* =========================================
+   CONTAINER
+========================================= */
+
+.post-job-container {
+  max-width: 850px;
+  margin: 0 auto;
+}
+
+
+/* =========================================
+   BACK BUTTON
+========================================= */
+
+.post-job-page .back-button {
+  background: transparent;
+  border: none;
+
+  color: #555;
+  font-size: 15px;
+  font-weight: 500;
+
+  cursor: pointer;
+
+  margin-bottom: 25px;
+  padding: 8px 0;
+
+  transition: color 0.2s ease;
+}
+
+.post-job-page .back-button:hover {
+  color: #d8a7b1;
+}
+
+
+/* =========================================
+   HEADER
+========================================= */
+
+.post-job-header {
+  margin-bottom: 30px;
+}
+
+.post-job-header h1 {
+  font-size: 36px;
+  font-weight: 700;
+
+  color: #111;
+
+  margin: 0 0 10px;
+}
+
+.post-job-header p {
+  color: #777;
+
+  font-size: 16px;
+
+  margin: 0;
+}
+
+
+/* =========================================
+   FORM CARD
+========================================= */
+
+.post-job-form {
+  background: #ffffff;
+
+  padding: 40px;
+
+  border-radius: 16px;
+
+  border: 1px solid #e9e9e9;
+
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.04);
+
+  box-sizing: border-box;
+}
+
+
+/* =========================================
+   FORM TITLE
+========================================= */
+
+.post-job-form h2 {
+  font-size: 22px;
+
+  margin: 0 0 30px;
+
+  color: #111;
+
+  padding-bottom: 18px;
+
+  border-bottom: 1px solid #eeeeee;
+}
+
+
+/* =========================================
+   LABELS
+========================================= */
+
+.post-job-form label {
+  display: block;
+
+  font-size: 14px;
+
+  font-weight: 600;
+
+  color: #222;
+
+  margin-bottom: 8px;
+}
+
+
+/* =========================================
+   INPUTS
+========================================= */
+
+.post-job-form input,
+.post-job-form select,
+.post-job-form textarea {
+  width: 100%;
+
+  box-sizing: border-box;
+
+  padding: 14px 15px;
+
+  margin-bottom: 22px;
+
+  border: 1px solid #dcdcdc;
+
+  border-radius: 9px;
+
+  background: #ffffff;
+
+  color: #222;
+
+  font-size: 14px;
+
+  font-family: inherit;
+
+  outline: none;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+
+/* =========================================
+   PLACEHOLDER
+========================================= */
+
+.post-job-form input::placeholder,
+.post-job-form textarea::placeholder {
+  color: #999;
+}
+
+
+/* =========================================
+   FOCUS
+========================================= */
+
+.post-job-form input:focus,
+.post-job-form select:focus,
+.post-job-form textarea:focus {
+  border-color: #d8a7b1;
+
+  box-shadow: 0 0 0 3px rgba(216, 167, 177, 0.15);
+}
+
+
+/* =========================================
+   SELECT
+========================================= */
+
+.post-job-form select {
+  cursor: pointer;
+}
+
+
+/* =========================================
+   TEXTAREA
+========================================= */
+
+.post-job-form textarea {
+  resize: vertical;
+
+  min-height: 130px;
+
+  line-height: 1.6;
+}
+
+
+/* =========================================
+   BUTTON CONTAINER
+========================================= */
+
+.post-job-buttons {
+  display: flex;
+
+  justify-content: flex-end;
+
+  gap: 12px;
+
+  margin-top: 10px;
+
+  padding-top: 25px;
+
+  border-top: 1px solid #eeeeee;
+}
+
+
+/* =========================================
+   CANCEL BUTTON
+========================================= */
+
+.cancel-button {
+  padding: 13px 25px;
+
+  border-radius: 8px;
+
+  border: 1px solid #d8d8d8;
+
+  background: #ffffff;
+
+  color: #444;
+
+  font-size: 14px;
+
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: all 0.2s ease;
+}
+
+.cancel-button:hover {
+  background: #f5f5f5;
+
+  border-color: #c8c8c8;
+}
+
+
+/* =========================================
+   POST JOB BUTTON
+========================================= */
+
+.post-job-button {
+  padding: 10px 28px;
+
+  border-radius: 8px;
+
+  border: none;
+
+  background: #d8a7b1;
+
+  color: #111;
+
+  font-size: 14px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition: all 0.2s ease;
+}
+
+.post-job-button:hover {
+  background: #c9919d;
+
+  transform: translateY(-1px);
+}
+
+
+/* =========================================
+   DISABLED BUTTON
+========================================= */
+
+.post-job-button:disabled {
+  opacity: 0.6;
+
+  cursor: not-allowed;
+
+  transform: none;
+}
+
+
+/* =========================================
+   RESPONSIVE DESIGN
+========================================= */
+
+@media (max-width: 768px) {
+
+  .post-job-page {
+    padding: 30px 20px;
+  }
+
+  .post-job-header h1 {
+    font-size: 30px;
+  }
+
+  .post-job-form {
+    padding: 25px;
+  }
+
+  .post-job-buttons {
+    flex-direction: column;
+  }
+
+  .cancel-button,
+  .post-job-button {
+    width: 100%;
+  }
+}
+
+
+/* =========================================
+   SMALL MOBILE
+========================================= */
+
+@media (max-width: 480px) {
+
+  .post-job-page {
+    padding: 20px 15px;
+  }
+
+  .post-job-header h1 {
+    font-size: 26px;
+  }
+
+  .post-job-header p {
+    font-size: 14px;
+  }
+
+  .post-job-form {
+    padding: 20px;
+    border-radius: 12px;
+  }
+
+  .post-job-form h2 {
+    font-size: 19px;
+  }
+
 }

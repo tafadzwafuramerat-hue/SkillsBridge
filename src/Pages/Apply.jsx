@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { FaArrowLeft } from "react-icons/fa";
+import { FaMagic } from "react-icons/fa";
 
 function Apply() {
   const { id } = useParams();
@@ -12,10 +13,12 @@ function Apply() {
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [tailoring, setTailoring] = useState(false);
 
   const [coverLetter, setCoverLetter] = useState("");
   const [phone, setPhone] = useState("");
   const [cv, setCv] = useState("");
+  const [cvText, setCvText] = useState("");
 
   useEffect(() => {
     const loadApplicationPage = async () => {
@@ -32,6 +35,17 @@ function Apply() {
       if (!currentUser) {
         setLoading(false);
         navigate("/login");
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", currentUser.id)
+        .maybeSingle();
+
+      if (profile?.role === "employer") {
+        navigate("/employer-dashboard");
         return;
       }
 
@@ -69,6 +83,65 @@ function Apply() {
   // =========================
   // SUBMIT APPLICATION
   // =========================
+
+  const handleTailorCv = async () => {
+    if (!cvText.trim()) {
+      alert("Paste your CV text before tailoring it.");
+      return;
+    }
+
+    if (!job) {
+      alert("Job information could not be found.");
+      return;
+    }
+
+    setTailoring(true);
+
+    const { data, error } = await supabase.functions.invoke("tailor-cv", {
+      body: {
+        cvText: cvText.trim(),
+        job: {
+          title: job.title,
+          company: job.company,
+          description: job.description,
+          responsibilities: job.responsibilities,
+          requirements: job.requirements,
+        },
+      },
+    });
+
+    setTailoring(false);
+
+    if (error) {
+      console.error("CV tailoring failed:", error);
+      let serverMessage = "";
+
+      if (error.context instanceof Response) {
+        try {
+          const responseBody = await error.context.json();
+          serverMessage = responseBody?.error || "";
+        } catch {
+          serverMessage = "";
+        }
+      }
+
+      const errorMessage = serverMessage || (
+        error.message?.includes("Failed to send a request")
+          ? "The tailor-cv function is not deployed or Supabase is unreachable."
+          : error.message || "Unable to tailor your CV right now."
+      );
+      alert(errorMessage);
+      return;
+    }
+
+    if (!data?.tailoredCv) {
+      alert("The AI did not return a tailored CV. Please try again.");
+      return;
+    }
+
+    setCvText(data.tailoredCv);
+    alert("Your CV has been tailored. Review it before submitting.");
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -143,6 +216,7 @@ function Apply() {
 
         phone: phone,
         cv: cv,
+        cv_text: cvText.trim(),
 
         cover_letter: coverLetter,
 
@@ -327,6 +401,26 @@ function Apply() {
               setCv(e.target.value)
             }
           />
+
+          <label>
+            CV Text for AI Tailoring
+          </label>
+
+          <textarea
+            placeholder="Paste your current CV text here so it can be tailored to this job."
+            value={cvText}
+            onChange={(e) => setCvText(e.target.value)}
+          />
+
+          <button
+            type="button"
+            className="tailor-cv-button"
+            onClick={handleTailorCv}
+            disabled={tailoring || submitting}
+          >
+            <FaMagic aria-hidden="true" />{" "}
+            {tailoring ? "Tailoring CV..." : "Tailor CV to This Job"}
+          </button>
 
 
           {/* COVER LETTER */}

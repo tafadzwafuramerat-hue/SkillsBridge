@@ -11,7 +11,9 @@ function Dashboard() {
 
   const [applications, setApplications] = useState([]);
   const [savedJobs, setSavedJobs] = useState([]);
+  const [jobs, setJobs] = useState([]);
 
+  const [fullName, setFullName] = useState("");
   const [bio, setBio] = useState("");
   const [location, setLocation] = useState("");
   const [skills, setSkills] = useState("");
@@ -28,6 +30,26 @@ function Dashboard() {
         return;
       }
 
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", currentUser.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error("Profile role load failed:", profileError);
+      }
+
+      const userRole =
+        profileData?.role ||
+        currentUser.user_metadata?.role ||
+        "job_seeker";
+
+      if (userRole !== "job_seeker") {
+        navigate("/employer-dashboard");
+        return;
+      }
+
       setUser(currentUser);
 
       // Load profile, applications and saved jobs
@@ -35,11 +57,12 @@ function Dashboard() {
         profileResult,
         applicationsResult,
         savedJobsResult,
+        jobsResult,
       ] = await Promise.all([
         // PROFILE
         supabase
           .from("profiles")
-          .select("bio, location, skills")
+          .select("full_name, bio, location, skills")
           .eq("id", currentUser.id)
           .maybeSingle(),
 
@@ -90,6 +113,13 @@ function Dashboard() {
           .order("created_at", {
             ascending: false,
           }),
+
+        supabase
+          .from("jobs")
+          .select("id, title, company, location, type, salary, description, requirements")
+          .order("created_at", {
+            ascending: false,
+          }),
       ]);
 
       // Errors
@@ -114,7 +144,19 @@ function Dashboard() {
         );
       }
 
+      if (jobsResult.error) {
+        console.error(
+          "Jobs load failed:",
+          jobsResult.error
+        );
+      }
+
       // Profile
+      setFullName(
+        profileResult.data?.full_name ||
+          currentUser.user_metadata?.full_name ||
+          ""
+      );
       setBio(profileResult.data?.bio || "");
       setLocation(profileResult.data?.location || "");
       setSkills(profileResult.data?.skills || "");
@@ -128,6 +170,7 @@ function Dashboard() {
       setSavedJobs(
         savedJobsResult.data || []
       );
+      setJobs(jobsResult.data || []);
 
       setLoading(false);
     };
@@ -155,12 +198,27 @@ function Dashboard() {
       return;
     }
 
+    const cleanName = fullName.trim();
+
+    if (!cleanName) {
+      alert("Please enter your full name.");
+      return;
+    }
+
+    const { error: authError } = await supabase.auth.updateUser({
+      data: { full_name: cleanName },
+    });
+
+    if (authError) {
+      alert(authError.message);
+      return;
+    }
+
     const { error } = await supabase
       .from("profiles")
       .upsert({
         id: user.id,
-        full_name:
-          user.user_metadata?.full_name || "",
+        full_name: cleanName,
         email: user.email || "",
         bio,
         location,
@@ -239,6 +297,8 @@ function Dashboard() {
       </div>
     );
   }
+
+  const recommendedJobs = getRecommendedJobs(jobs, skills, applications);
 
   return (
     <div className="dashboard">
@@ -329,7 +389,7 @@ function Dashboard() {
 
             <h1>
               Welcome back,{" "}
-              {user.user_metadata?.full_name ||
+              {fullName ||
                 user.email}
               !
             </h1>
@@ -434,10 +494,11 @@ function Dashboard() {
             <input
               type="text"
               value={
-                user.user_metadata?.full_name ||
-                ""
+                fullName
               }
-              disabled
+              onChange={(e) =>
+                setFullName(e.target.value)
+              }
             />
 
 
@@ -504,6 +565,42 @@ function Dashboard() {
 
           </form>
 
+        </section>
+
+        <section className="applications-section recommendations-section">
+          <div className="profile-heading">
+            <div>
+              <h2>Recommended Jobs</h2>
+              <p>Opportunities selected from your profile skills.</p>
+            </div>
+          </div>
+
+          {recommendedJobs.length === 0 ? (
+            <div className="no-applications">
+              <p>Add skills to your profile to get job recommendations.</p>
+            </div>
+          ) : (
+            <div className="recommendations-list">
+              {recommendedJobs.map((job) => (
+                <div className="recommendation-card" key={job.id}>
+                  <div>
+                    <h3>{job.title}</h3>
+                    <p>{job.company}</p>
+                    <span>{job.location || "Location not provided"}</span>
+                  </div>
+
+                  <div className="recommendation-actions">
+                    <strong>{job.matchScore}% match</strong>
+                    <button
+                      onClick={() => navigate(`/jobs/${job.id}`)}
+                    >
+                      View Job
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
 
@@ -725,6 +822,42 @@ function Dashboard() {
 
     </div>
   );
+}
+
+function getRecommendedJobs(jobs, skills, applications) {
+  const appliedJobIds = new Set(
+    applications.map((application) => application.job_id)
+  );
+  const profileSkills = skills
+    .split(",")
+    .map((skill) => skill.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (profileSkills.length === 0) {
+    return [];
+  }
+
+  return jobs
+    .filter((job) => !appliedJobIds.has(job.id))
+    .map((job) => {
+      const requirements = Array.isArray(job.requirements)
+        ? job.requirements.join(" ")
+        : job.requirements || "";
+      const searchableText = `${job.title} ${job.description} ${requirements}`.toLowerCase();
+      const matchedSkills = profileSkills.filter((skill) =>
+        searchableText.includes(skill)
+      );
+
+      return {
+        ...job,
+        matchScore: Math.round(
+          (matchedSkills.length / profileSkills.length) * 100
+        ),
+      };
+    })
+    .filter((job) => job.matchScore > 0)
+    .sort((firstJob, secondJob) => secondJob.matchScore - firstJob.matchScore)
+    .slice(0, 3);
 }
 
 
